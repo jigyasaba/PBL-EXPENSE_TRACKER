@@ -1,3 +1,5 @@
+//array of objects expense[0]=>get the first expense object
+//each object here acts like an  associative arrray
 let expenses =[];
 let totalAmount = 0;
 
@@ -8,8 +10,8 @@ const addBtn = document.getElementById('add-btn')
 const expenseTableBody = document.getElementById('expense-table-body')
 const totalAmountCell = document.getElementById('total-amount')
 
-addBtn.addEventListener('click', function(){
-    const category = categorySelect.value;
+addBtn.addEventListener('click',()=>{
+    const category = categorySelect.value;//TO SET AND RETRIEVE THE VALUE OF FORM ELEMENTS WE USE VALUE
     const amount = Number(amountInput.value);
     const date= dateInput.value;
 
@@ -40,13 +42,12 @@ addBtn.addEventListener('click', function(){
     const deleteBtn = document.createElement('button');
 
     deleteBtn.textContent = 'Delete';
-    deleteBtn.classList.add('delete-btn');
-    deleteBtn.addEventListener('click', function(){
+    deleteBtn.classList.add('delete-btn');//new class added to classs list which helps in styling
+    deleteBtn.addEventListener('click',()=>{
         expenses.splice(expenses.indexOf(expense),1);
-
         totalAmount -= expense.amount;
-        totalAmountCell.textContent = totalAmount;
-
+        totalAmountCell.innerHTML = "<b>"+totalAmount+"</b>";
+        totalAmountCell.style.color="red";
         expenseTableBody.removeChild(newRow);
     })
     const expense= expenses[expenses.length - 1];
