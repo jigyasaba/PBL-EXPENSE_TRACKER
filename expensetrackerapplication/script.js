@@ -1,88 +1,83 @@
-//array of objects expense[0]=>get the first expense object
-//each object here acts like an  associative arrray
-let expenses =[];
-let totalAmount = 0;
+document.addEventListener('DOMContentLoaded', () => {
+    const categorySelect = document.getElementById('category-select');
+    const amountInput = document.getElementById('amount-input');
+    const dateInput = document.getElementById('date-input');
+    const addBtn = document.getElementById('add-btn');
+    const expenseTableBody = document.getElementById('expense-table-body');
+    const totalAmountCell = document.getElementById('total-amount');
 
-const categorySelect = document.getElementById('category-select')
-const amountInput = document.getElementById('amount-input')
-const dateInput = document.getElementById('date-input')
-const addBtn = document.getElementById('add-btn')
-const expenseTableBody = document.getElementById('expense-table-body')
-const totalAmountCell = document.getElementById('total-amount')
+    let totalAmount = 0;
 
-addBtn.addEventListener('click',()=>{
-    const category = categorySelect.value;//TO SET AND RETRIEVE THE VALUE OF FORM ELEMENTS WE USE VALUE
-    const amount = Number(amountInput.value);
-    const date= dateInput.value;
-
-    if(category === ''){
-        alert('please select a category');
-        return;
+    function updateTotal(amountChange) {
+        totalAmount += amountChange;
+        totalAmountCell.textContent = totalAmount.toFixed(2);
     }
-    if(isNaN(amount) || amount <= 0){
-        alert('please enter a valid amount');
-        return;
+
+    function createExpenseRow(expense) {
+        const newRow = expenseTableBody.insertRow();
+        const categoryCell = newRow.insertCell();
+        const amountCell = newRow.insertCell();
+        const dateCell = newRow.insertCell();
+        const deleteCell = newRow.insertCell();
+
+        categoryCell.textContent = expense.category;
+        amountCell.textContent = expense.amount;
+        dateCell.textContent = expense.date;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.classList.add('delete-btn');
+        deleteBtn.addEventListener('click', () => {
+            fetch('delete_expense.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `id=${expense.id}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateTotal(-expense.amount);
+                    expenseTableBody.removeChild(newRow);
+                }
+            });
+        });
+
+        deleteCell.appendChild(deleteBtn);
+        updateTotal(parseFloat(expense.amount));
     }
-    if(date ===''){
-        alert('please select a date');
-        return;
+
+    function loadExpenses() {
+        fetch('get_expenses.php')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(exp => createExpenseRow(exp));
+            });
     }
-    expenses.push({category,amount,date})
 
-    totalAmount += amount;
-    totalAmountCell.textContent=totalAmount;
+    addBtn.addEventListener('click', () => {
+        const category = categorySelect.value;
+        const amount = parseFloat(amountInput.value);
+        const date = dateInput.value;
 
-    const newRow = expenseTableBody.insertRow();
+        if (!category || isNaN(amount) || amount <= 0 || !date) {
+            alert("Please fill all fields correctly.");
+            return;
+        }
 
-    const categoryCell = newRow.insertCell();
-    const AmountCell = newRow.insertCell();
-    const dateCell = newRow.insertCell();
-    const deleteCell = newRow.insertCell();
+        fetch('add_expense.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `category=${category}&amount=${amount}&date=${date}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                createExpenseRow({ id: data.id, category, amount, date });
+                amountInput.value = '';
+                dateInput.value = '';
+            }
+        });
+    });
 
-    const deleteBtn = document.createElement('button');
-
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.classList.add('delete-btn');//new class added to classs list which helps in styling
-    deleteBtn.addEventListener('click',()=>{
-        expenses.splice(expenses.indexOf(expense),1);
-        totalAmount -= expense.amount;
-        totalAmountCell.innerHTML = "<b>"+totalAmount+"</b>";
-        totalAmountCell.style.color="red";
-        expenseTableBody.removeChild(newRow);
-    })
-    const expense= expenses[expenses.length - 1];
-    categoryCell.textContent=expense.category;
-    AmountCell.textContent=expense.amount;
-    dateCell.textContent=expense.date;
-    deleteCell.appendChild(deleteBtn);
-
+    loadExpenses();
 });
-for(const exepense of expenses){
-    totalAmount += amount;
-    totalAmountCell.textContent=totalAmount;
-
-    const newRow = expenseTableBody.insertRow();
-
-    const categoryCell = newRow.insertCell();
-    const AmountCell = newRow.insertCell();
-    const dateCell = newRow.insertCell();
-    const deleteCell = newRow.insertCell();
-
-    const deleteBtn = document.createElement('button');
-
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.classList.add('delete-btn');
-    deleteBtn.addEventListener('click', function(){
-        expenses.splioce(expenses.indexOf(expense),1);
-
-        totalAmount -= expense.amount;
-        totalAmountCell.textContent = totalAmount;
-
-        expenseTableBody.removeChild(newRow);
-    })
-    const expense= expenses[expenses.length - 1];
-    categoryCell.textContent=expense.category;
-    AmountCell.textContent=expense.amount;
-    dateCell.textContent=expense.date;
-    deleteCell.appendChild(deleteBtn);
-}
