@@ -4,10 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('date-input');
     const addBtn = document.getElementById('add-btn');
     const expenseTableBody = document.getElementById('expense-table-body');
-    const totalAmountCell = document.getElementById('total-amount');
-
+    const totalAmountCell = document.getElementById('total-amount')
+    const undoBtn = document.getElementById('undo-btn');
+    const deletedStack = []; // ← DSA: Stack for undo
     let totalAmount = 0;
-
+    const categoryTotals = {}; // Track category-wise totals
+    const categoryTotalsList = document.getElementById('category-totals-list');
     function updateTotal(amountChange) {
         totalAmount += amountChange;
         totalAmountCell.textContent = totalAmount.toFixed(2);
@@ -27,23 +29,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'Delete';
         deleteBtn.classList.add('delete-btn');
-        deleteBtn.addEventListener('click', () => {
-            fetch('delete_expense.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `id=${expense.id}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    updateTotal(-expense.amount);
-                    expenseTableBody.removeChild(newRow);
-                }
-            });
-        });
+       // Modify delete logic to store deleted item in stack
+     deleteBtn.addEventListener('click', () => {
+       fetch('delete_expense.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `id=${expense.id}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            updateTotal(-expense.amount);
+            updateCategoryTotal(expense.category, -expense.amount);
+            expenseTableBody.removeChild(newRow);
+
+            // Push the deleted item to stack
+            deletedStack.push(expense);
+        }
+    });
+});
 
         deleteCell.appendChild(deleteBtn);
         updateTotal(parseFloat(expense.amount));
+        updateCategoryTotal(expense.category, parseFloat(expense.amount));
     }
 
     function loadExpenses() {
@@ -51,6 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(response => response.json())
             .then(data => {
                 data.forEach(exp => createExpenseRow(exp));
+                data.forEach(exp => {
+                    createExpenseRow(exp);
+                    updateCategoryTotal(exp.category, parseFloat(exp.amount));
+                });
+                
             });
     }
 
@@ -78,6 +91,53 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+// Add undo functionality
+   undoBtn.addEventListener('click', () => {
+   
+   if (deletedStack.length === 0) {
+        alert("Nothing to undo.");
+        return;
+    }
+
+    const lastDeleted = deletedStack.pop();
+
+    fetch('add_expense.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `category=${lastDeleted.category}&amount=${lastDeleted.amount}&date=${lastDeleted.date}`
+    })
+     .then(response => response.json())
+     .then(data => {
+        if (data.status === 'success') {
+            lastDeleted.id = data.id;
+            createExpenseRow(lastDeleted);
+        }
+    
+    });
+    updateCategoryTotal(lastDeleted.category, parseFloat(lastDeleted.amount));
+
+});
+
+function updateCategoryTotal(category, amountChange) {
+    if (!categoryTotals[category]) {
+        categoryTotals[category] = 0;
+    }
+    categoryTotals[category] += amountChange;
+
+    renderCategoryTotals();
+}
+
+function renderCategoryTotals() {
+    categoryTotalsList.innerHTML = ''; // clear existing
+    for (const category in categoryTotals) {
+        const li = document.createElement('li');
+        li.textContent = `${category}: ₹${categoryTotals[category].toFixed(2)}`;
+        categoryTotalsList.appendChild(li);
+    }
+}
 
     loadExpenses();
 });
+
+
+
